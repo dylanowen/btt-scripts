@@ -1,0 +1,9 @@
+{
+    "name": "btt-scripts",
+    "version": "0.0.1",
+    "description": "Scripts for Better Touch Tool",
+    "devDependencies": {},
+    "dependencies": {
+        "request": "^2.81.0"
+    }
+}
