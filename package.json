@@ -5,6 +5,7 @@
     "devDependencies": {},
     "dependencies": {
         "node-emoji": "^1.8.1",
+        "os-utils": "0.0.14",
         "request": "^2.81.0"
     }
 }
