@@ -4,6 +4,7 @@
     "description": "Scripts for Better Touch Tool",
     "devDependencies": {},
     "dependencies": {
+        "node-emoji": "^1.8.1",
         "request": "^2.81.0"
     }
 }
