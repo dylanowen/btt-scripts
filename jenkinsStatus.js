@@ -1,50 +1,35 @@
 const request = require('request');
 const emoji = require('node-emoji');
 
+// this uses this jenkins plugin https://github.com/jenkinsci/pipeline-stage-view-plugin
+
+// the expected url format is https://<jenkins-host>/job/<job-name>/lastBuild/wfapi/describe
 const jenkinsUrl = process.argv[2];
-const showEmoji = process.argv.length > 2 && process.argv[3] == 'true';
 
 function handleError(error) {
     console.error(error);
     console.log('Error');
 }
 
-const ResultMap = {
-    success: emoji.get('white_check_mark'),
-    aborted: emoji.get('black_circle'),
-    not_built: emoji.get('warning'),
-    unstable: emoji.get('warning'),
-    failure: emoji.get('red_circle'),
-    pending: emoji.get('large_blue_circle'),
-    unknown: emoji.get('black_circle')
+const StatusMap = {
+    NOT_EXECUTED: emoji.get('arrows_counterclockwise') + 'Waiting',
+    ABORTED: emoji.get('heavy_multiplication_x') + 'Aborted',
+    SUCCESS: emoji.get('vertical_traffic_light'),
+    IN_PROGRESS: emoji.get('arrows_counterclockwise') + 'Running',
+    PAUSED_PENDING_INPUT: emoji.get('double_vertical_bar') + 'Paused',
+    FAILED: emoji.get('red_circle') + 'Failed',
+    UNSTABLE: emoji.get('question') + 'Unstable'
 }
 
 request(jenkinsUrl, (error, response, rawBody) => {
     if (!error && response.statusCode >= 200 && response.statusCode < 300) {
         const body = JSON.parse(rawBody);
-        const building = ('building' in body && body.building);
+        const status = ('status' in body) ? body.status : 'UNKNOWN';
+        const statusMessage = (status in StatusMap) ? StatusMap[status] : emoji.get('question') + 'Unknown';
 
-        let result = 'pending';
-        if (!building) {
-            if ('result' in body && body.result != null) {
-                result = body.result.toLowerCase();
-            }
-            else {
-                result = 'unknown';
-            }
-        }
-
-        let prettyResult;
-        if (showEmoji) {
-            prettyResult = (result in ResultMap) ? ResultMap[result] : ResultMap.unknown;
-        }
-        else {
-            prettyResult = result.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
-        }
-
-        console.log(prettyResult);
+        console.log(emoji.get('robot_face') + statusMessage);
     }
     else {
         handleError(error);
     }
-});
+});//(?i)success
