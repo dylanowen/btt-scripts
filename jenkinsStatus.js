@@ -5,6 +5,9 @@ const emoji = require('node-emoji');
 
 // the expected url format is https://<jenkins-host>/job/<job-name>/lastBuild/wfapi/describe
 const jenkinsUrl = process.argv[2];
+const emojiName = (process.argv.length > 2) ? process.argv[3] : null;
+
+const emojiPrefix = (emojiName != null) ? ((emoji.hasEmoji(emojiName) ? emoji.get(emojiName) : emoji.get('x'))) : '';
 
 function handleError(error) {
     console.error(error);
@@ -27,9 +30,9 @@ request(jenkinsUrl, (error, response, rawBody) => {
         const status = ('status' in body) ? body.status : 'UNKNOWN';
         const statusMessage = (status in StatusMap) ? StatusMap[status] : emoji.get('question') + 'Unknown';
 
-        console.log(emoji.get('robot_face') + statusMessage);
+        console.log(emojiPrefix + statusMessage);
     }
     else {
         handleError(error);
     }
-});//(?i)success
+});
