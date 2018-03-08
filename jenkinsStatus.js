@@ -5,9 +5,12 @@ const emoji = require('node-emoji');
 
 // the expected url format is https://<jenkins-host>/job/<job-name>/lastBuild/wfapi/describe
 const jenkinsUrl = process.argv[2];
-const emojiName = (process.argv.length > 2) ? process.argv[3] : null;
+const emojiNames = (process.argv.length > 2) ? process.argv.slice(3) : null;
 
-const emojiPrefix = (emojiName != null) ? ((emoji.hasEmoji(emojiName) ? emoji.get(emojiName) : emoji.get('x'))) : '';
+let emojiPrefix = '';
+if (emojiNames != null) {
+    emojiPrefix = emojiNames.map(emojiName => emoji.hasEmoji(emojiName) ? emoji.get(emojiName) : emoji.get('x')).join('')
+}
 
 function handleError(error) {
     console.error(error);
@@ -17,7 +20,7 @@ function handleError(error) {
 const StatusMap = {
     NOT_EXECUTED: emoji.get('arrows_counterclockwise') + 'Waiting',
     ABORTED: emoji.get('heavy_multiplication_x') + 'Aborted',
-    SUCCESS: emoji.get('vertical_traffic_light'),
+    SUCCESS: '',
     IN_PROGRESS: emoji.get('arrows_counterclockwise') + 'Running',
     PAUSED_PENDING_INPUT: emoji.get('double_vertical_bar') + 'Paused',
     FAILED: emoji.get('red_circle') + 'Failed',
