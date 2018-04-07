@@ -7,7 +7,6 @@ import (
 	"github.com/kyokomi/emoji"
 	"github.com/pkg/errors"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -26,7 +25,7 @@ var statusMap = map[string]string{
 func main() {
 
 	if len(os.Args) <= 1 {
-		log.Fatalln("Missing jenkins url")
+		fatal("Missing jenkins url")
 	}
 
 	var jenkinsUrl = os.Args[1]
@@ -82,11 +81,18 @@ func main() {
 	)
 
 	if err != nil {
-		println("Error: ", err)
+		fatal("Error", err)
 	}
 }
 
 /// the emoji library adds a padding string at the end, remove it
 func emojize(emojiString string) string {
 	return strings.Trim(emoji.Sprint(":"+emojiString+":"), emoji.ReplacePadding)
+}
+
+func fatal(a ...interface{}) {
+	fmt.Print("Error")
+	fmt.Fprintln(os.Stderr, a...)
+
+	os.Exit(1)
 }

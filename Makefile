@@ -10,7 +10,7 @@ dependencies:
 format:
 	go fmt ./...
 
-jenkins-status: dependencies format
+jenkins-status: format
 	go build -o $(bin_folder)/jenkinsStatus
 
 default: jenkins-status
