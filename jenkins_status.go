@@ -17,8 +17,8 @@ var statusMap = map[string]string{
 	"ABORTED":              emojize("heavy_multiplication_x") + "Aborted",
 	"SUCCESS":              "",
 	"IN_PROGRESS":          emojize("arrows_counterclockwise") + "Running",
-	"PAUSED_PENDING_INPUT": emojize("double_vertical_bar") + "Paused",
-	"FAILED":               emojize("red_circle") + "Failed",
+	"PAUSED_PENDING_INPUT": emojize("vertical_traffic_light") + "Paused",
+	"FAILED":               emojize("bangbang") + "Failed",
 	"UNSTABLE":             emojize("question") + "Unstable",
 }
 
