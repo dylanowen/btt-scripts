@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -22,17 +23,28 @@ var statusMap = map[string]string{
 	"UNSTABLE":             emojize("question") + "Unstable",
 }
 
+const RESULT_KEY = "result"
+
 func main() {
 
 	if len(os.Args) <= 1 {
 		fatal("Missing jenkins url")
 	}
 
-	var jenkinsUrl = os.Args[1]
+	var rawJenkinsUrl = os.Args[1]
 	var emojiNames = os.Args[2:]
 	var emojiPrefix = ""
 	for _, emojiName := range emojiNames {
 		emojiPrefix += emojize(emojiName)
+	}
+
+	var jenkinsUrl string
+	if parsedUrl, err := url.Parse(rawJenkinsUrl); err != nil {
+		fatal("Invalid jenkins url")
+	} else {
+		parsedUrl.Query().Add("tree", RESULT_KEY)
+
+		jenkinsUrl = parsedUrl.String()
 	}
 
 	var response *http.Response
@@ -54,7 +66,7 @@ func main() {
 			return json.Unmarshal(bytes, &body)
 		},
 		func() error {
-			rawStatus, hasStatus := body["status"]
+			rawStatus, hasStatus := body[RESULT_KEY]
 			if !hasStatus {
 				status = ""
 			} else {
@@ -62,7 +74,7 @@ func main() {
 				case string:
 					status = rawStatus.(string)
 				default:
-					return errors.New("Unexpected type of status")
+					return errors.New("Unexpected type of " + RESULT_KEY)
 				}
 			}
 
