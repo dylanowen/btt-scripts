@@ -14,16 +14,17 @@ import (
 )
 
 var statusMap = map[string]string{
-	"NOT_EXECUTED":         emojize("arrows_counterclockwise") + "Waiting",
-	"ABORTED":              emojize("heavy_multiplication_x") + "Aborted",
-	"SUCCESS":              "",
-	"IN_PROGRESS":          emojize("arrows_counterclockwise") + "Running",
-	"PAUSED_PENDING_INPUT": emojize("vertical_traffic_light") + "Paused",
-	"FAILED":               emojize("bangbang") + "Failed",
-	"UNSTABLE":             emojize("question") + "Unstable",
+	"SUCCESS":   "",
+	"UNSTABLE":  emojize("question") + "Unstable",
+	"FAILURE":   emojize("bangbang") + "Failed",
+	"NOT_BUILT": "\u23F8Paused",
+	"ABORTED":   emojize("heavy_multiplication_x") + "Aborted",
 }
 
-const RESULT_KEY = "result"
+var BuildingStatus = emojize("arrows_counterclockwise") + "Running"
+
+const ResultKey = "result"
+const BuildingKey = "building"
 
 func main() {
 
@@ -42,13 +43,14 @@ func main() {
 	if parsedUrl, err := url.Parse(rawJenkinsUrl); err != nil {
 		fatal("Invalid jenkins url")
 	} else {
-		parsedUrl.Query().Add("tree", RESULT_KEY)
+		parsedUrl.Query().Add("tree", ResultKey+","+BuildingKey+",executor")
 
 		jenkinsUrl = parsedUrl.String()
 	}
 
 	var response *http.Response
 	var body map[string]interface{}
+	var building bool
 	var status string
 
 	var err = utils.ChainErr(
@@ -66,24 +68,46 @@ func main() {
 			return json.Unmarshal(bytes, &body)
 		},
 		func() error {
-			rawStatus, hasStatus := body[RESULT_KEY]
-			if !hasStatus {
-				status = ""
+			rawBuilding, hasBuilding := body[BuildingKey]
+			if !hasBuilding || rawBuilding == nil {
+				building = false
 			} else {
-				switch rawStatus.(type) {
-				case string:
-					status = rawStatus.(string)
+				switch rawBuilding.(type) {
+				case bool:
+					building = rawBuilding.(bool)
 				default:
-					return errors.New("Unexpected type of " + RESULT_KEY)
+					return errors.New("Unexpected type of " + BuildingKey)
 				}
 			}
 
 			return nil
 		},
 		func() error {
-			statusMessage, foundStatus := statusMap[status]
-			if !foundStatus {
-				statusMessage = emojize("question") + "Unknown"
+			rawStatus, hasStatus := body[ResultKey]
+			if !hasStatus || rawStatus == nil {
+				status = ""
+			} else {
+				switch rawStatus.(type) {
+				case string:
+					status = rawStatus.(string)
+				default:
+					return errors.New("Unexpected type of " + ResultKey)
+				}
+			}
+
+			return nil
+		},
+		func() error {
+			var statusMessage string
+
+			if building {
+				statusMessage = BuildingStatus
+			} else {
+				var foundStatus bool
+				statusMessage, foundStatus = statusMap[status]
+				if !foundStatus {
+					statusMessage = emojize("question") + "Unknown"
+				}
 			}
 
 			fmt.Print(emojiPrefix, statusMessage)
