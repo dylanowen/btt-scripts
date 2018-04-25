@@ -1,30 +1,53 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/dylanowen/btt-scripts/btt"
+	"github.com/dylanowen/btt-scripts/jenkins"
 	"github.com/dylanowen/btt-scripts/utils"
 	"github.com/kyokomi/emoji"
-	"github.com/pkg/errors"
-	"io/ioutil"
-	"net/http"
-	"net/url"
+	"image/color"
 	"os"
 	"strings"
 )
 
-var statusMap = map[string]string{
-	"SUCCESS":   "",
-	"UNSTABLE":  emojize("question") + "Unstable",
-	"FAILURE":   emojize("bangbang") + "Failed",
-	"NOT_BUILT": "\u23F8Paused",
-	"ABORTED":   emojize("heavy_multiplication_x") + "Aborted",
+type statusOutput struct {
+	Text  string
+	Color color.RGBA
 }
 
-var BuildingStatus = emojize("arrows_counterclockwise") + "Running"
+var statusMap = map[string]statusOutput{
+	"SUCCESS": {
+		Text:  "",
+		Color: color.RGBA{0x6a, 0xa5, 0x34, 0xff},
+	},
+	"UNSTABLE": {
+		Text:  emojize("question") + "Unstable",
+		Color: color.RGBA{0xf5, 0xab, 0x42, 0xff},
+	},
+	"FAILURE": {
+		Text:  emojize("bangbang") + "Failed",
+		Color: color.RGBA{0xcf, 0x42, 0x49, 0xff},
+	},
+	"NOT_BUILT": {
+		Text:  "\u23F8Paused",
+		Color: color.RGBA{0x94, 0x93, 0x93, 0xff},
+	},
+	"ABORTED": {
+		Text:  emojize("heavy_multiplication_x") + "Aborted",
+		Color: color.RGBA{0x94, 0x93, 0x93, 0xff},
+	},
+}
 
-const ResultKey = "result"
-const BuildingKey = "building"
+var buildingStatus = statusOutput{
+	Text:  emojize("arrows_counterclockwise") + "Running",
+	Color: color.RGBA{0x40, 0x85, 0xde, 0xff},
+}
+
+var unknownStatus = statusOutput{
+	Text:  emojize("question") + "Unknown",
+	Color: color.RGBA{0x94, 0x93, 0x93, 0xff},
+}
 
 func main() {
 
@@ -39,78 +62,43 @@ func main() {
 		emojiPrefix += emojize(emojiName)
 	}
 
-	var jenkinsUrl string
-	if parsedUrl, err := url.Parse(rawJenkinsUrl); err != nil {
-		fatal("Invalid jenkins url")
-	} else {
-		parsedUrl.Query().Add("tree", ResultKey+","+BuildingKey+",executor")
-
-		jenkinsUrl = parsedUrl.String()
+	var jenkinsClient, err = jenkins.NewClient(rawJenkinsUrl)
+	if err != nil {
+		fatal(err)
 	}
 
-	var response *http.Response
-	var body map[string]interface{}
-	var building bool
-	var status string
+	var buildStatus *jenkins.BuildStatus
 
-	var err = utils.ChainErr(
+	err = utils.ChainErr(
 		func() (err error) {
-			response, err = http.Get(jenkinsUrl)
+			buildStatus, err = jenkinsClient.GetBuildStatus()
 
 			return
 		},
 		func() error {
-			bytes, err := ioutil.ReadAll(response.Body)
-			defer response.Body.Close()
-			if err != nil {
-				return err
-			}
-			return json.Unmarshal(bytes, &body)
-		},
-		func() error {
-			rawBuilding, hasBuilding := body[BuildingKey]
-			if !hasBuilding || rawBuilding == nil {
-				building = false
-			} else {
-				switch rawBuilding.(type) {
-				case bool:
-					building = rawBuilding.(bool)
-				default:
-					return errors.New("Unexpected type of " + BuildingKey)
-				}
-			}
+			var statusMessage statusOutput
 
-			return nil
-		},
-		func() error {
-			rawStatus, hasStatus := body[ResultKey]
-			if !hasStatus || rawStatus == nil {
-				status = ""
-			} else {
-				switch rawStatus.(type) {
-				case string:
-					status = rawStatus.(string)
-				default:
-					return errors.New("Unexpected type of " + ResultKey)
-				}
-			}
-
-			return nil
-		},
-		func() error {
-			var statusMessage string
-
-			if building {
-				statusMessage = BuildingStatus
+			if buildStatus.Building {
+				statusMessage = buildingStatus
 			} else {
 				var foundStatus bool
-				statusMessage, foundStatus = statusMap[status]
+				statusMessage, foundStatus = statusMap[buildStatus.Status]
 				if !foundStatus {
-					statusMessage = emojize("question") + "Unknown"
+					statusMessage = unknownStatus
 				}
 			}
 
-			fmt.Print(emojiPrefix, statusMessage)
+			// construct our script result
+			var scriptResult = &btt.ScriptResult{
+				Text:            emojiPrefix + statusMessage.Text,
+				BackgroundColor: &statusMessage.Color,
+			}
+
+			if resultString, err := scriptResult.ToJson().String(); err == nil {
+				fmt.Print(resultString)
+			} else {
+				return err
+			}
 
 			return nil
 		},
