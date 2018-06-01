@@ -111,7 +111,11 @@ func main() {
 
 /// the emoji library adds a padding string at the end, remove it
 func emojize(emojiString string) string {
-	return strings.Trim(emoji.Sprint(":"+emojiString+":"), emoji.ReplacePadding)
+	if _, ok := emoji.CodeMap()[":"+emojiString+":"]; ok {
+		return strings.Trim(emoji.Sprint(":"+emojiString+":"), emoji.ReplacePadding)
+	} else {
+		return emojiString
+	}
 }
 
 func fatal(a ...interface{}) {
