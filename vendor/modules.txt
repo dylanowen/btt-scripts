@@ -1,0 +1,2 @@
+# github.com/kyokomi/emoji v0.0.0-20161123144355-7e06b236c489
+github.com/kyokomi/emoji

@@ -5,7 +5,8 @@ SHELL:=/bin/bash
 bin_folder = bin
 
 dependencies:
-	dep ensure
+	GO111MODULE=on go mod tidy
+	GO111MODULE=on go mod vendor
 
 format:
 	go fmt ./...
